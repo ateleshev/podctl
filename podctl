@@ -57,21 +57,24 @@ show_pid() {
 
 # Help
 show_help() {
-  echo "-----------------------------------------------------------------------"
-  echo "Usage: ${NAME} [list|desc|cid|pid|net{link|route|flush}] <POD-NAME> ..."
-  echo "-----------------------------------------------------------------------"
-  echo "  - list: show list of a specific PODs                                 "
-  echo "  - desc: show details of a specific PODs                              "
-  echo "  - cid: show container ID                                             "
-  echo "  - pid: show process ID                                               "
-  echo "  - net: show network configuration                                    "
-  echo "-----------------------------------------------------------------------"
+  echo "----------------------------------------------------------------------------"
+  echo "Usage: ${NAME} [list|desc|cid|pid|net{addr|link|route|...}] <POD-NAME> [...]"
+  echo "----------------------------------------------------------------------------"
+  echo "  - list: show list of a specific PODs                                      "
+  echo "  - desc: show details of a specific PODs                                   "
+  echo "  - cid: show container ID                                                  "
+  echo "  - pid: show process ID                                                    "
+  echo "  - net: show network configuration                                         "
+  echo "----------------------------------------------------------------------------"
 }
 
 # --[ Network ]--
 
 show_net() {
   case ${1} in
+    addr)
+      show_net_addr "${2}" "${3}"
+    ;;
     link)
       show_net_link "${2}" "${3}"
     ;;
@@ -85,6 +88,17 @@ show_net() {
       show_net_help
     ;;
   esac
+}
+
+# Address
+show_net_addr() {
+  if [ ! "${1}" ]; then
+    echo "[error] <POD-NAME> not specified"
+    exit 1
+  fi
+
+  PID=$(get_pid "${1}")
+  sudo nsenter -t "${PID}" -n ip address show ${2}
 }
 
 # Link
@@ -127,13 +141,14 @@ show_net_flush() {
 
 # Help
 show_net_help() {
-  echo "-------------------------------------------------------------"
-  echo "Usage: ${NAME} net [link|route|flush] <POD-NAME> [<IF-NAME>] "
-  echo "-------------------------------------------------------------"
-  echo " - link: show network links                                  "
-  echo " - route: show network routes                                "
-  echo " - flush: flush network address                              "
-  echo "-------------------------------------------------------------"
+  echo "-----------------------------------------------------------------"
+  echo "Usage: ${NAME} net [addr|link|route|flush] <POD-NAME> [<IF-NAME>]"
+  echo "-----------------------------------------------------------------"
+  echo " - addr: show network address                                    "
+  echo " - link: show network links                                      "
+  echo " - route: show network routes                                    "
+  echo " - flush: flush network address                                  "
+  echo "-----------------------------------------------------------------"
 }
 
 case ${1} in
