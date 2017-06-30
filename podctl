@@ -13,49 +13,146 @@ if [ ! "${DOCKER}" ]; then
   echo "[error] docker is not found"
 fi
 
+# Container ID
+get_cid() {
+  ${KUBECTL} get po ${1} -o jsonpath='{.status.containerStatuses[0].containerID}' | sed -e 's#^docker://##g'
+}
+
+get_pid() {
+  CONTAINER_ID=$(show_cid "${1}")
+  ${DOCKER} inspect --format '{{ .State.Pid }}' ${CONTAINER_ID}
+}
+
+# ==[ Main ]==
+
 # List of PODs
-get_list() {
+show_list() {
   ${KUBECTL} get po ${1} -o wide
 }
 
 # Details of PODs
-get_desc() {
+show_desc() {
   ${KUBECTL} describe po ${1}
 }
 
 # Container ID
-get_cid() {
-  CONTAINER_ID=$(${KUBECTL} get po ${1} -o jsonpath='{.status.containerStatuses[0].containerID}' | sed -e 's#^docker://##g')
-  echo ${CONTAINER_ID}
+show_cid() {
+  if [ ! "${1}" ]; then
+    echo "[error] <POD-NAME> not specified"
+    exit 1
+  fi
+
+  echo $(get_cid "${1}")
 }
 
 # Process ID
-get_pid() {
-  CONTAINER_ID=$(get_cid "${1}")
-  ${DOCKER} inspect --format '{{ .State.Pid }}' ${CONTAINER_ID}
+show_pid() {
+  if [ ! "${1}" ]; then
+    echo "[error] <POD-NAME> not specified"
+    exit 1
+  fi
+
+  echo $(get_pid "${1}")
 }
 
-case ${ACTION} in
+# Help
+show_help() {
+  echo "-----------------------------------------------------------------------"
+  echo "Usage: ${NAME} [list|desc|cid|pid|net{link|route|flush}] <POD-NAME> ..."
+  echo "-----------------------------------------------------------------------"
+  echo "  - list: show list of a specific PODs                                 "
+  echo "  - desc: show details of a specific PODs                              "
+  echo "  - cid: show container ID                                             "
+  echo "  - pid: show process ID                                               "
+  echo "  - net: show network configuration                                    "
+  echo "-----------------------------------------------------------------------"
+}
+
+# --[ Network ]--
+
+show_net() {
+  case ${1} in
+    link)
+      show_net_link "${2}" "${3}"
+    ;;
+    route)
+      show_net_route "${2}" "${3}"
+    ;;
+    flush)
+      show_net_flush "${2}" "${3}"
+    ;;
+    *)
+      show_net_help
+    ;;
+  esac
+}
+
+# Link
+show_net_link() {
+  if [ ! "${1}" ]; then
+    echo "[error] <POD-NAME> not specified"
+    exit 1
+  fi
+
+  PID=$(get_pid "${1}")
+  sudo nsenter -t "${PID}" -n ip link show ${2}
+}
+
+# Route
+show_net_route() {
+  if [ ! "${1}" ]; then
+    echo "[error] <POD-NAME> not specified"
+    exit 1
+  fi
+
+  PID=$(get_pid "${1}")
+  sudo nsenter -t "${PID}" -n ip route show ${2}
+}
+
+# Flush
+show_net_flush() {
+  if [ ! "${1}" ]; then
+    echo "[error] <POD-NAME> not specified"
+    exit 1
+  fi
+
+  if [ ! "${2}" ]; then
+    echo "[error] <IF-NAME> not specified"
+    exit 1
+  fi
+
+  PID=$(get_pid "${1}")
+  sudo nsenter -t "${PID}" -n ip addr flush dev ${2}
+}
+
+# Help
+show_net_help() {
+  echo "-------------------------------------------------------------"
+  echo "Usage: ${NAME} net [link|route|flush] <POD-NAME> [<IF-NAME>] "
+  echo "-------------------------------------------------------------"
+  echo " - link: show network links                                  "
+  echo " - route: show network routes                                "
+  echo " - flush: flush network address                              "
+  echo "-------------------------------------------------------------"
+}
+
+case ${1} in
   list)
-    get_list "${2}"
+    show_list "${2}"
   ;;
   desc)
-    get_desc "${2}"
+    show_desc "${2}"
   ;;
   cid)
-    get_cid "${2}"
+    show_cid "${2}"
   ;;
   pid)
-    get_pid "${2}"
+    show_pid "${2}"
+  ;;
+  net)
+    show_net "${2}" "${3}" "${4}"
   ;;
   *)
-    echo "-------------------------------------------------------------"
-    echo "Usage: ${NAME} [list|desc|cid|pid] <POD-NAME>                "
-    echo "-------------------------------------------------------------"
-    echo " - list: show list of a specific PODs                        "
-    echo " - desc: details of a specific PODs                          "
-    echo " - cid: return container ID                                  "
-    echo " - pid: return process ID                                    "
-    echo "-------------------------------------------------------------"
+    show_help
   ;;
 esac
