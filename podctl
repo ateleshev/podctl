@@ -65,6 +65,16 @@ show_sh() {
   ${KUBECTL} exec -it ${1} sh
 }
 
+# Logs
+show_logs() {
+  if [ ! "${1}" ]; then
+    echo "[error] <POD-NAME> not specified"
+    exit 1
+  fi
+
+  ${KUBECTL} logs ${1}
+}
+
 # --[ Network ]--
 
 show_net() {
@@ -141,25 +151,26 @@ show_net_help() {
   echo "-----------------------------------------------------------------"
   echo "Usage: ${NAME} net [addr|link|route|flush] <POD-NAME> [<IF-NAME>]"
   echo "-----------------------------------------------------------------"
-  echo " - addr: show network address                                    "
-  echo " - link: show network links                                      "
-  echo " - route: show network routes                                    "
-  echo " - flush: flush network address                                  "
+  echo "   addr: show network address                                    "
+  echo "   link: show network links                                      "
+  echo "  route: show network routes                                     "
+  echo "  flush: flush network address                                   "
   echo "-----------------------------------------------------------------"
 }
 
 # Help
 show_help() {
-  echo "----------------------------------------------------------------------------"
-  echo "Usage: ${NAME} [list|desc|cid|pid|net{addr|link|route|...}] <POD-NAME> [...]"
-  echo "----------------------------------------------------------------------------"
-  echo "  - list: show list of a specific PODs                                      "
-  echo "  - desc: show details of a specific PODs                                   "
-  echo "  -  cid: show container ID                                                 "
-  echo "  -  pid: show process ID                                                   "
-  echo "  -  net: show network configuration                                        "
-  echo "  -   sh: open shell console inside POD                                     "
-  echo "----------------------------------------------------------------------------"
+  echo "------------------------------------------------------------------------------------"
+  echo "Usage: ${NAME} [list|desc|cid|pid|net{addr|link|route|...}|sh|logs] <POD-NAME> [...]"
+  echo "------------------------------------------------------------------------------------"
+  echo "  list: show list of a specific PODs                                                "
+  echo "  desc: show details of a specific PODs                                             "
+  echo "   cid: show container ID                                                           "
+  echo "   pid: show process ID                                                             "
+  echo "   net: show network configuration                                                  "
+  echo "    sh: open shell console inside POD                                               "
+  echo "  logs: show POD logs                                                               "
+  echo "------------------------------------------------------------------------------------"
 }
 
 case ${1} in
@@ -180,6 +191,9 @@ case ${1} in
   ;;
   net)
     show_net "${2}" "${3}" "${4}"
+  ;;
+  logs)
+    show_logs "${2}"
   ;;
   *)
     show_help
