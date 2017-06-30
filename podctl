@@ -3,20 +3,45 @@
 NAME=$(basename $0)
 ACTION="${1}"
 
-# Container ID
-get_cid() {
-  POD_NAME="${1}"
-  CONTAINER_ID=$(kubectl get po "${POD_NAME}" -o jsonpath='{.status.containerStatuses[0].containerID}' | sed -e 's#^docker://##g')
-  echo "${CONTAINER_ID}"
+KUBECTL=$(which kubectl)
+if [ ! "${KUBECTL}" ]; then
+  echo "[error] kubectl is not found"
+fi
+
+DOCKER=$(which docker)
+if [ ! "${DOCKER}" ]; then
+  echo "[error] docker is not found"
+fi
+
+# List of PODs
+get_list() {
+  ${KUBECTL} get po ${1} -o wide
 }
 
+# Details of PODs
+get_desc() {
+  ${KUBECTL} describe po ${1}
+}
+
+# Container ID
+get_cid() {
+  CONTAINER_ID=$(${KUBECTL} get po ${1} -o jsonpath='{.status.containerStatuses[0].containerID}' | sed -e 's#^docker://##g')
+  echo ${CONTAINER_ID}
+}
+
+# Process ID
 get_pid() {
   CONTAINER_ID=$(get_cid "${1}")
-  PID=$(docker inspect --format '{{ .State.Pid }}' "${CONTAINER_ID}")
-  echo "${PID}"
+  ${DOCKER} inspect --format '{{ .State.Pid }}' ${CONTAINER_ID}
 }
 
 case ${ACTION} in
+  list)
+    get_list "${2}"
+  ;;
+  desc)
+    get_desc "${2}"
+  ;;
   cid)
     get_cid "${2}"
   ;;
@@ -25,8 +50,10 @@ case ${ACTION} in
   ;;
   *)
     echo "-------------------------------------------------------------"
-    echo "Usage: ${NAME} [cid|pid] <POD-NAME>"
+    echo "Usage: ${NAME} [list|desc|cid|pid] <POD-NAME>                "
     echo "-------------------------------------------------------------"
+    echo " - list: show list of a specific PODs                        "
+    echo " - desc: details of a specific PODs                          "
     echo " - cid: return container ID                                  "
     echo " - pid: return process ID                                    "
     echo "-------------------------------------------------------------"
