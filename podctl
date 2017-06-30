@@ -55,17 +55,14 @@ show_pid() {
   echo $(get_pid "${1}")
 }
 
-# Help
-show_help() {
-  echo "----------------------------------------------------------------------------"
-  echo "Usage: ${NAME} [list|desc|cid|pid|net{addr|link|route|...}] <POD-NAME> [...]"
-  echo "----------------------------------------------------------------------------"
-  echo "  - list: show list of a specific PODs                                      "
-  echo "  - desc: show details of a specific PODs                                   "
-  echo "  - cid: show container ID                                                  "
-  echo "  - pid: show process ID                                                    "
-  echo "  - net: show network configuration                                         "
-  echo "----------------------------------------------------------------------------"
+# Shell
+show_sh() {
+  if [ ! "${1}" ]; then
+    echo "[error] <POD-NAME> not specified"
+    exit 1
+  fi
+
+  ${KUBECTL} exec -it ${1} sh
 }
 
 # --[ Network ]--
@@ -151,12 +148,29 @@ show_net_help() {
   echo "-----------------------------------------------------------------"
 }
 
+# Help
+show_help() {
+  echo "----------------------------------------------------------------------------"
+  echo "Usage: ${NAME} [list|desc|cid|pid|net{addr|link|route|...}] <POD-NAME> [...]"
+  echo "----------------------------------------------------------------------------"
+  echo "  - list: show list of a specific PODs                                      "
+  echo "  - desc: show details of a specific PODs                                   "
+  echo "  -  cid: show container ID                                                 "
+  echo "  -  pid: show process ID                                                   "
+  echo "  -  net: show network configuration                                        "
+  echo "  -   sh: open shell console inside POD                                     "
+  echo "----------------------------------------------------------------------------"
+}
+
 case ${1} in
   list)
     show_list "${2}"
   ;;
   desc)
     show_desc "${2}"
+  ;;
+  sh)
+    show_sh "${2}"
   ;;
   cid)
     show_cid "${2}"
